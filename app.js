@@ -196,6 +196,25 @@ const connection = mysql.createConnection({
       res.json(results);
     });
   });
+
+  app.get('/ObtenerEstacionamientos', (req, res) => {
+    const query = `
+    SELECT e.id_est, te.tipo_est, e.estado
+    FROM Estacionamiento AS e
+    JOIN Tipo_estacionamiento AS te ON e.id_Tipoest = te.id_tipoest
+  `;
+  
+    connection.query(query, (err, results) => {
+      if (err) {
+        console.error('Error al realizar la consulta:', err);
+        res.status(500).json({ error: 'Error al obtener los datos de los estacionamientos' });
+        return;
+      }
+      res.json(results);
+    });
+  });
+
+
   
   
   app.put('/ActualizarPedido/:id', (req, res) => {
@@ -251,6 +270,115 @@ const connection = mysql.createConnection({
       res.json(results);
     });
   });
+
+  app.put('/estacionamiento/:id', (req, res) => {
+    const idEstacionamiento = req.params.id;
+    const nuevoEstado = req.body.estado;
+  
+    // Realiza la validación de entrada según tus necesidades
+  
+    // Actualiza el estado en la base de datos
+    const query = `UPDATE Estacionamiento SET estado = ? WHERE id_est = ?`;
+    connection.query(query, [nuevoEstado, idEstacionamiento], (error, results) => {
+      if (error) {
+        console.error('Error al actualizar el estado:', error);
+        res.status(500).json({ error: 'Ocurrió un error al actualizar el estado.' });
+      } else {
+        res.json({ success: true });
+      }
+    });
+  });
+
+  app.get('/buscarEnVisitas', (req, res) => {
+    const patente = req.query.patente;
+  
+    const query = `
+      SELECT v.rut_visita, v.dv, v.nombre, v.apellido, v.patente, v.id_departamento, v.id_edificio, v.id_est, e.estado, t.tipo_est
+      FROM Visita v
+      JOIN Estacionamiento e ON v.id_est = e.id_est
+      JOIN Tipo_estacionamiento t ON e.id_tipoest = t.id_tipoest
+      WHERE v.patente = ?
+      ORDER BY v.id_visita DESC
+      LIMIT 1;
+    `;
+  
+    connection.query(query, [patente], (err, results) => {
+      if (err) {
+        console.error('Error al realizar la consulta:', err);
+        res.status(500).json({ error: 'Error al buscar en visitas' });
+        return;
+      }
+  
+      if (results.length === 0) {
+        res.status(404).json({ mensaje: 'No se encontraron resultados en visitas' });
+      } else {
+        const visita = results[0];
+        res.json(visita);
+      }
+    });
+  });
+  
+  
+
+
+  app.post('/GuardarVisita', (req, res) => {
+    const { rut_visita, dv, nombre, apellido, patente, id_est, id_departamento, id_edificio, id_conjunto, fecha_ing, fecha_sal } = req.body;
+  
+    const visita = {
+      rut_visita,
+      dv,
+      nombre,
+      apellido,
+      patente,
+      id_est,
+      id_departamento,
+      id_edificio,
+      id_conjunto,
+      fecha_ing,
+      fecha_sal
+    };
+  
+    const query = connection.query('INSERT INTO Visita SET ?', visita, (error, results) => {
+      if (error) {
+        console.error('Error al guardar la visita:', error);
+        res.status(500).json({ error: 'Error al guardar la visita' });
+        return;
+      }
+      res.json({ message: 'Visita guardada exitosamente' });
+    });
+  
+    
+  });
+
+  app.put('/modificarFechaSal', (req, res) => {
+    const patente = req.body.patente;
+    const nuevaFechaSal = req.body.nuevaFechaSal;
+  
+    const query = `
+      UPDATE Visita
+      SET fecha_sal = ?
+      WHERE patente = ?
+      ORDER BY id_visita DESC
+      LIMIT 1;
+    `;
+  
+    connection.query(query, [nuevaFechaSal, patente], (err, result) => {
+      if (err) {
+        console.error('Error al realizar la consulta:', err);
+        res.status(500).json({ error: 'Error al modificar la fecha de salida' });
+        return;
+      }
+  
+      if (result.affectedRows === 0) {
+        res.status(404).json({ mensaje: 'No se encontró ninguna visita con la patente especificada' });
+      } else {
+        res.json({ mensaje: 'La fecha de salida se modificó correctamente' });
+      }
+    });
+  });
+
+  
+  
 
 app.listen(port, () => {
   console.log(`La API está escuchando en el puerto ${port}`);
