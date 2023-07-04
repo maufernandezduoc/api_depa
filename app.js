@@ -380,6 +380,6 @@ const connection = mysql.createConnection({
   
   
 
-app.listen(port,'192.168.100.40',() => {
+app.listen(port,() => {
   console.log(`La API está escuchando en el puerto ${port}`);
 });
